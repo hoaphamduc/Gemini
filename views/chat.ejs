@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css">
+    <title>Chat with AI</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat with AI</h1>
+        <div id="chatContainer">
+            <!-- Chat messages will appear here -->
+        </div>
+        <form id="chatForm">
+            <textarea id="message" name="message" placeholder="Type your message here..." required></textarea>
+            <button type="submit" id="sendButton">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById("chatForm");
+        const chatContainer = document.getElementById("chatContainer");
+        const sendButton = document.getElementById("sendButton");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault(); // Prevent form from reloading the page
+
+            const message = document.getElementById("message").value;
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Add user's message to chat
+            chatContainer.innerHTML += `
+                <div class="message user-message">
+                    <div class="message-content">${message}</div>
+                    <div class="timestamp">${timestamp}</div>
+                </div>
+            `;
+
+            // Clear the textarea and disable the send button
+            document.getElementById("message").value = "";
+            sendButton.disabled = true;
+            sendButton.classList.add("disabled");
+
+            // Add loading animation for AI
+            const aiLoading = document.createElement("div");
+            aiLoading.classList.add("message", "ai-message");
+            aiLoading.innerHTML = `
+                <div class="message-content loading">Thinking<span class="dots">...</span></div>
+            `;
+            chatContainer.appendChild(aiLoading);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Fetch AI response
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message }),
+                });
+
+                const data = await response.json();
+
+                // Update AI message or display an error
+                if (data.success) {
+                    aiLoading.innerHTML = `
+                        <div class="message-content">${data.response}</div>
+                        <div class="timestamp">${timestamp}</div>
+                    `;
+                } else {
+                    aiLoading.innerHTML = `
+                        <div class="message-content error">Service Unavailable. Please try again later.</div>
+                        <div class="timestamp">${timestamp}</div>
+                    `;
+                }
+            } catch (error) {
+                aiLoading.innerHTML = `
+                    <div class="message-content error">An error occurred. Please try again later.</div>
+                    <div class="timestamp">${timestamp}</div>
+                `;
+            }
+
+            // Re-enable the send button
+            sendButton.disabled = false;
+            sendButton.classList.remove("disabled");
+
+            // Scroll to the latest message
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+    </script>
+</body>
+</html>
